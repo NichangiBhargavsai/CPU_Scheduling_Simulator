@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Scheduling Simulator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #172033;
+        }
+
+        header {
+            background: #1e3a8a;
+            color: white;
+            padding: 22px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: white;
+            padding: 18px;
+            margin-bottom: 18px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px #0001;
+        }
+
+        h2 {
+            color: #1e40af;
+        }
+
+        input,
+        button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th {
+            background: #dbeafe;
+        }
+
+        .gantt {
+            display: flex;
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        .block {
+            min-width: 65px;
+            padding: 20px 8px;
+            text-align: center;
+            background: #93c5fd;
+            border: 2px solid white;
+            font-weight: bold;
+        }
+
+        .block.active {
+            background: #fbbf24;
+        }
+
+        .block.idle {
+            background: #cbd5e1;
+        }
+
+        .log {
+            background: #f8fafc;
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 4px solid #2563eb;
+        }
+
+        pre {
+            background: #0f172a;
+            color: white;
+            padding: 15px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>CPU Scheduling Simulator</h1>
+        <p>Operating Systems Lab Experiment</p>
+    </header>
+
+    <div class="panel">
+        <h2>1. Add Process</h2>
+
+        <input type="text" id="pid" placeholder="Process ID">
+        <input type="number" id="at" placeholder="Arrival Time" min="0">
+        <input type="number" id="bt" placeholder="Burst Time" min="1">
+
+        <button onclick="addProcess()">Add Process</button>
+        <button onclick="loadSample()">Load Sample</button>
+        <button onclick="clearAll()">Clear All</button>
+    </div>
+
+    <div class="panel">
+        <h2>2. Process Table</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Process</th>
+                    <th>Arrival Time</th>
+                    <th>Burst Time</th>
+                    <th>Completion Time</th>
+                    <th>Turnaround Time</th>
+                    <th>Waiting Time</th>
+                </tr>
+            </thead>
+            <tbody id="processTable"></tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <h2>3. Select Scheduling Algorithm</h2>
+
+        <button onclick="runFCFS()">FCFS</button>
+        <button onclick="runSJF()">SJF</button>
+        <button onclick="runRR()">Round Robin</button>
+        <button onclick="runMLFQ()">MLFQ</button>
+
+        <br><br>
+
+        <label>Time Quantum:</label>
+        <input type="number" id="quantum" value="2" min="1">
+
+        <button onclick="nextStep()">Next Step</button>
+        <button onclick="resetSteps()">Reset View</button>
+    </div>
+
+    <div class="panel">
+        <h2>4. Gantt Chart</h2>
+        <div id="gantt" class="gantt"></div>
+        <p id="timeLabels"></p>
+    </div>
+
+    <div class="panel">
+        <h2>5. Average Times</h2>
+        <p id="avgTAT">Average Turnaround Time: -</p>
+        <p id="avgWT">Average Waiting Time: -</p>
+    </div>
+
+    <div class="panel">
+        <h2>6. Operation Log</h2>
+        <div id="logs"></div>
+    </div>
+
+    <div class="panel">
+        <h2>7. AIM</h2>
+        <p>
+            To implement and understand CPU scheduling algorithms
+            such as FCFS, SJF, Round Robin and MLFQ, and calculate
+            completion time, turnaround time and waiting time.
+        </p>
+    </div>
+
+    <div class="panel">
+        <h2>8. Procedure</h2>
+        <ol>
+            <li>Enter process ID, arrival time and burst time.</li>
+            <li>Add the processes to the process table.</li>
+            <li>Select the required scheduling algorithm.</li>
+            <li>Enter the time quantum for Round Robin.</li>
+            <li>Execute the scheduling algorithm.</li>
+            <li>Observe the Gantt chart.</li>
+            <li>Calculate completion, turnaround and waiting times.</li>
+            <li>Compare the average waiting and turnaround times.</li>
+        </ol>
+    </div>
+
+    <div class="panel">
+        <h2>9. Pseudocode – FCFS</h2>
+        <pre>
+Sort processes according to arrival time
+
+time = 0
+
+For each process:
+    If time < arrival time:
+        time = arrival time
+
+    time = time + burst time
+
+    completion time = time
+
+    turnaround time = completion time - arrival time
+
+    waiting time = turnaround time - burst time
+</pre>
+    </div>
+
+    <div class="panel">
+        <h2>10. C Program – FCFS</h2>
+        <pre>
+#include &lt;stdio.h&gt;
+
+int main() {
+    int n, i, j, at[20], bt[20];
+    int ct[20], tat[20], wt[20], time = 0;
+    int temp;
+    float avgTAT = 0, avgWT = 0;
+
+    printf("Enter number of processes: ");
+    scanf("%d", &n);
+
+    for(i = 0; i < n; i++) {
+        printf("Enter arrival and burst time: ");
+        scanf("%d%d", &at[i], &bt[i]);
+    }
+
+    for(i = 0; i < n-1; i++) {
+        for(j = i+1; j < n; j++) {
+            if(at[i] > at[j]) {
+                temp = at[i];
+                at[i] = at[j];
+                at[j] = temp;
+
+                temp = bt[i];
+                bt[i] = bt[j];
+                bt[j] = temp;
+            }
+        }
+    }
+
+    for(i = 0; i < n; i++) {
+        if(time < at[i])
+            time = at[i];
+
+        time += bt[i];
+
+        ct[i] = time;
+        tat[i] = ct[i] - at[i];
+        wt[i] = tat[i] - bt[i];
+
+        avgTAT += tat[i];
+        avgWT += wt[i];
+    }
+
+    printf("\nP\tCT\tTAT\tWT\n");
+
+    for(i = 0; i < n; i++) {
+        printf("P%d\t%d\t%d\t%d\n",
+        i+1, ct[i], tat[i], wt[i]);
+    }
+
+    printf("Average TAT = %.2f\n", avgTAT/n);
+    printf("Average WT = %.2f\n", avgWT/n);
+
+    return 0;
+}
+</pre>
+    </div>
+
+    <div class="panel">
+        <h2>11. FAQs</h2>
+
+        <p><b>1. What is CPU scheduling?</b><br>
+            It is the process of selecting a process from the ready queue for CPU execution.</p>
+
+        <p><b>2. What is FCFS?</b><br>
+            First Come First Serve executes processes in arrival order.</p>
+
+        <p><b>3. What is SJF?</b><br>
+            Shortest Job First selects the process with the smallest burst time among arrived processes.</p>
+
+        <p><b>4. What is Round Robin?</b><br>
+            It allocates CPU time to each process using a fixed time quantum.</p>
+
+        <p><b>5. What is completion time?</b><br>
+            The time at which a process finishes execution.</p>
+
+        <p><b>6. What is turnaround time?</b><br>
+            TAT = Completion Time - Arrival Time.</p>
+
+        <p><b>7. What is waiting time?</b><br>
+            WT = Turnaround Time - Burst Time.</p>
+    </div>
+
+    <script>
+        let processes = [];
+        let schedule = [];
+        let currentStep = -1;
+
+        function addProcess() {
+            let id = document.getElementById("pid").value.trim();
+            let at = Number(document.getElementById("at").value);
+            let bt = Number(document.getElementById("bt").value);
+
+            if (!id || processes.some(p => p.id === id) ||
+                !Number.isInteger(at) || at < 0 ||
+                !Number.isInteger(bt) || bt < 1) {
+                alert("Enter a unique ID, valid arrival time and positive burst time.");
+                return;
+            }
+
+            processes.push({ id, at, bt });
+            displayProcesses();
+        }
+
+        function loadSample() {
+            processes = [
+                { id: "P1", at: 0, bt: 5 },
+                { id: "P2", at: 1, bt: 3 },
+                { id: "P3", at: 2, bt: 1 }
+            ];
+            displayProcesses();
+            runFCFS();
+        }
+
+        function clearAll() {
+            processes = [];
+            schedule = [];
+            currentStep = -1;
+            displayProcesses();
+            displayChart();
+            document.getElementById("logs").innerHTML = "";
+            document.getElementById("avgTAT").innerHTML = "Average Turnaround Time: -";
+            document.getElementById("avgWT").innerHTML = "Average Waiting Time: -";
+        }
+
+        function displayProcesses() {
+            let html = "";
+
+            processes.forEach(p => {
+                html += `<tr>
+        <td>${p.id}</td>
+        <td>${p.at}</td>
+        <td>${p.bt}</td>
+        <td>${p.ct ?? "-"}</td>
+        <td>${p.tat ?? "-"}</td>
+        <td>${p.wt ?? "-"}</td>
+        </tr>`;
+            });
+
+            document.getElementById("processTable").innerHTML = html;
+        }
+
+        function runAlgorithm(type) {
+            if (processes.length === 0) {
+                alert("Add processes first");
+                return;
+            }
+
+            let ps = processes.map(p => ({
+                ...p, remaining: p.bt, done: false
+            }));
+
+            let time = 0;
+            let completed = 0;
+            let result = [];
+            let logs = [];
+
+            function add(id, start, end) {
+                if (end > start)
+                    result.push({ id, start, end });
+            }
+
+            if (type === "FCFS" || type === "SJF") {
+                while (completed < ps.length) {
+                    let ready = ps.filter(p => !p.done && p.at <= time);
+
+                    if (ready.length === 0) {
+                        let next = Math.min(...ps.filter(p => !p.done).map(p => p.at));
+                        add("IDLE", time, next);
+                        logs.push("CPU is idle until time " + next);
+                        time = next;
+                        continue;
+                    }
+
+                    if (type === "FCFS")
+                        ready.sort((a, b) => a.at - b.at);
+                    else
+                        ready.sort((a, b) => a.bt - b.bt || a.at - b.at);
+
+                    let p = ready[0];
+                    let start = time;
+
+                    time += p.bt;
+                    p.ct = time;
+                    p.tat = p.ct - p.at;
+                    p.wt = p.tat - p.bt;
+                    p.done = true;
+                    completed++;
+
+                    add(p.id, start, time);
+                    logs.push(p.id + " executes from " + start + " to " + time);
+                    logs.push(p.id + " completes at " + time);
+                }
+            }
+
+            if (type === "RR") {
+                let q = Number(document.getElementById("quantum").value);
+
+                if (!Number.isInteger(q) || q < 1) {
+                    alert("Enter a positive time quantum");
+                    return;
+                }
+
+                let ordered = [...ps].sort((a, b) => a.at - b.at);
+                let queue = [];
+                let i = 0;
+
+                while (completed < ps.length) {
+                    while (i < ordered.length && ordered[i].at <= time) {
+                        queue.push(ordered[i++]);
+                    }
+
+                    if (queue.length === 0) {
+                        let next = ordered[i].at;
+                        add("IDLE", time, next);
+                        time = next;
+                        continue;
+                    }
+
+                    let p = queue.shift();
+                    let start = time;
+                    let run = Math.min(q, p.remaining);
+
+                    time += run;
+                    p.remaining -= run;
+                    add(p.id, start, time);
+
+                    while (i < ordered.length && ordered[i].at <= time) {
+                        queue.push(ordered[i++]);
+                    }
+
+                    logs.push(p.id + " executes from " + start + " to " + time);
+
+                    if (p.remaining === 0) {
+                        p.ct = time;
+                        p.done = true;
+                        completed++;
+                        logs.push(p.id + " completes");
+                    } else {
+                        queue.push(p);
+                        logs.push(p.id + " returns to ready queue");
+                    }
+                }
+
+                ps.forEach(p => {
+                    p.tat = p.ct - p.at;
+                    p.wt = p.tat - p.bt;
+                });
+            }
+
+            if (type === "MLFQ") {
+                let q1 = Number(document.getElementById("quantum").value);
+                let q2 = q1 * 2;
+
+                if (!Number.isInteger(q1) || q1 < 1) {
+                    alert("Enter a positive time quantum");
+                    return;
+                }
+
+                let ordered = [...ps].sort((a, b) => a.at - b.at);
+                let high = [], low = [], i = 0;
+
+                while (completed < ps.length) {
+                    while (i < ordered.length && ordered[i].at <= time) {
+                        high.push(ordered[i++]);
+                    }
+
+                    if (!high.length && !low.length) {
+                        let next = ordered[i].at;
+                        add("IDLE", time, next);
+                        time = next;
+                        continue;
+                    }
+
+                    let level = high.length ? high : low;
+                    let p = level.shift();
+                    let quantum = high.length >= 0 && level === high ? q1 : q2;
+
+                    let start = time;
+                    let run = Math.min(quantum, p.remaining);
+
+                    time += run;
+                    p.remaining -= run;
+                    add(p.id, start, time);
+
+                    while (i < ordered.length && ordered[i].at <= time) {
+                        high.push(ordered[i++]);
+                    }
+
+                    logs.push(p.id + " executes from " + start + " to " + time);
+
+                    if (p.remaining === 0) {
+                        p.ct = time;
+                        completed++;
+                        logs.push(p.id + " completes");
+                    } else {
+                        low.push(p);
+                        logs.push(p.id + " moves to Q2");
+                    }
+                }
+
+                ps.forEach(p => {
+                    p.tat = p.ct - p.at;
+                    p.wt = p.tat - p.bt;
+                });
+            }
+
+            schedule = result;
+            currentStep = -1;
+
+            processes = ps.map(p => ({
+                id: p.id, at: p.at, bt: p.bt,
+                ct: p.ct, tat: p.tat, wt: p.wt
+            }));
+
+            displayProcesses();
+            displayChart();
+
+            let avgTAT = ps.reduce((s, p) => s + p.tat, 0) / ps.length;
+            let avgWT = ps.reduce((s, p) => s + p.wt, 0) / ps.length;
+
+            document.getElementById("avgTAT").innerHTML =
+                "Average Turnaround Time: " + avgTAT.toFixed(2);
+
+            document.getElementById("avgWT").innerHTML =
+                "Average Waiting Time: " + avgWT.toFixed(2);
+
+            logs.push(...ps.map(p =>
+                `${p.id}: CT=${p.ct}, TAT=${p.tat}, WT=${p.wt}`
+            ));
+
+            document.getElementById("logs").innerHTML =
+                logs.map(x => `<div class="log">${x}</div>`).join("");
+        }
+
+        function runFCFS() {
+            runAlgorithm("FCFS");
+        }
+
+        function runSJF() {
+            runAlgorithm("SJF");
+        }
+
+        function runRR() {
+            runAlgorithm("RR");
+        }
+
+        function runMLFQ() {
+            runAlgorithm("MLFQ");
+        }
+
+        function displayChart() {
+            let html = "";
+            let times = [];
+
+            schedule.forEach((s, i) => {
+                html += `<div class="block" id="block${i}">
+        ${s.id}<br>
+        <small>${s.start} - ${s.end}</small>
+        </div>`;
+                times.push(s.start);
+            });
+
+            if (schedule.length)
+                times.push(schedule[schedule.length - 1].end);
+
+            document.getElementById("gantt").innerHTML = html;
+            document.getElementById("timeLabels").innerHTML =
+                times.join(" &nbsp;&nbsp;&nbsp; ");
+        }
+
+        function nextStep() {
+            if (!schedule.length) {
+                alert("Run an algorithm first");
+                return;
+            }
+
+            currentStep++;
+
+            if (currentStep >= schedule.length)
+                currentStep = 0;
+
+            schedule.forEach((s, i) => {
+                let block = document.getElementById("block" + i);
+                block.classList.toggle("active", i === currentStep);
+            });
+        }
+
+        function resetSteps() {
+            currentStep = -1;
+            displayChart();
+        }
+    </script>
+
+</body>
+
+</html>
